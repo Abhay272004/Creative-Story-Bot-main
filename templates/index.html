@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fantasy World & Character Engine | Document Editor</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style_minimalist.css') }}">
+    <!-- Marked js for markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        /* Comic Mode Background */
+        body.comic-mode .main-content {
+            background-color: #ffffff;
+            background-image: 
+                linear-gradient(to right, #e0e0e0 1px, transparent 1px),
+                linear-gradient(to bottom, #e0e0e0 1px, transparent 1px);
+            background-size: 40px 40px;
+            transition: background 0.3s ease;
+        }
+        
+        /* Custom Animated CSS Lego Tortoise */
+        .lego-tortoise {
+            width: 10px;
+            height: 10px;
+            margin: 40px auto 60px auto;
+            position: relative;
+            background: transparent;
+            box-shadow: 
+                70px 0 0 0 #4ade80, 80px 0 0 0 #4ade80, 90px 0 0 0 #4ade80,
+                60px 10px 0 0 #4ade80, 70px 10px 0 0 #166534, 80px 10px 0 0 #166534, 90px 10px 0 0 #4ade80,
+                50px 20px 0 0 #4ade80, 60px 20px 0 0 #166534, 70px 20px 0 0 #166534, 80px 20px 0 0 #166534, 90px 20px 0 0 #4ade80, 110px 20px 0 0 #4ade80, 120px 20px 0 0 #4ade80,
+                40px 30px 0 0 #4ade80, 50px 30px 0 0 #166534, 60px 30px 0 0 #166534, 70px 30px 0 0 #166534, 80px 30px 0 0 #166534, 90px 30px 0 0 #166534, 100px 30px 0 0 #4ade80, 110px 30px 0 0 #4ade80, 120px 30px 0 0 #000000, 130px 30px 0 0 #4ade80,
+                30px 40px 0 0 #4ade80, 40px 40px 0 0 #166534, 50px 40px 0 0 #166534, 60px 40px 0 0 #166534, 70px 40px 0 0 #166534, 80px 40px 0 0 #166534, 90px 40px 0 0 #166534, 100px 40px 0 0 #4ade80, 110px 40px 0 0 #4ade80, 120px 40px 0 0 #4ade80, 130px 40px 0 0 #4ade80,
+                40px 50px 0 0 #4ade80, 50px 50px 0 0 #4ade80, 60px 50px 0 0 #4ade80, 70px 50px 0 0 #4ade80, 80px 50px 0 0 #4ade80, 90px 50px 0 0 #4ade80, 100px 50px 0 0 #4ade80,
+                50px 60px 0 0 #4ade80, 60px 60px 0 0 #4ade80, 80px 60px 0 0 #4ade80, 90px 60px 0 0 #4ade80,
+                50px 70px 0 0 #4ade80, 60px 70px 0 0 #4ade80, 80px 70px 0 0 #4ade80, 90px 70px 0 0 #4ade80;
+            animation: tortoiseBob 1s infinite alternate step-end;
+            transform: translateX(-80px) scale(0.8);
+        }
+        
+        @keyframes tortoiseBob {
+            0% { transform: translateX(-80px) scale(0.8) translateY(0); }
+            50% { transform: translateX(-80px) scale(0.8) translateY(-5px); }
+            100% { transform: translateX(-80px) scale(0.8) translateY(-10px); }
+        }
+
+        /* Comic Book Modal Styling */
+        .comic-book-modal {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.85);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .comic-book-modal.active {
+            display: flex;
+        }
+
+        .book {
+            position: relative;
+            border-radius: 10px;
+            width: 450px;
+            height: 600px;
+            background-color: whitesmoke;
+            -webkit-box-shadow: 1px 1px 12px #000;
+            box-shadow: 1px 1px 12px #000;
+            -webkit-transform: preserve-3d;
+            -ms-transform: preserve-3d;
+            transform: preserve-3d;
+            -webkit-perspective: 2000px;
+            perspective: 2000px;
+            display: -webkit-box;
+            display: -ms-flexbox;
+            display: flex;
+            color: #000;
+            border: 4px solid #1a1a1a;
+            transition: transform 0.6s ease-in-out;
+        }
+
+        /* Book translation to center when open */
+        .book.open {
+            transform: translateX(225px);
+        }
+
+        .book:not(.open) .book-left-page {
+            display: none;
+        }
+
+        /* Extra pages stacked beneath (the thickness of the book) */
+        .book::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: #fff;
+            border: 4px solid #1a1a1a;
+            border-radius: 8px;
+            transform: translate(8px, 8px);
+            z-index: -1;
+            box-shadow: inset 4px 0 10px rgba(0,0,0,0.1);
+        }
+
+        .book::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: #fdfdfd;
+            border: 4px solid #1a1a1a;
+            border-radius: 8px;
+            transform: translate(16px, 16px);
+            z-index: -2;
+            box-shadow: 4px 4px 12px rgba(0,0,0,0.5);
+        }
+
+        .book-inside {
+            position: relative;
+            z-index: 2;
+            width: 100%;
+            height: 100%;
+            padding: 20px;
+            overflow: hidden; /* Removed scrolling, looks like a real page */
+            background-color: #fff;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+            line-height: 1.6;
+            cursor: pointer;
+        }
+
+        .book-inside img {
+            max-width: 100%;
+            border: 3px solid #1a1a1a;
+            border-radius: 5px;
+            box-shadow: 4px 4px 0 #1a1a1a;
+            margin: 10px 0;
+            display: block;
+        }
+
+        .cover {
+            top: 0;
+            left: 0;
+            position: absolute;
+            background-color: #facc15;
+            background-image: radial-gradient(#fbbf24 2px, transparent 2px), radial-gradient(#fbbf24 2px, transparent 2px);
+            background-size: 20px 20px;
+            background-position: 0 0, 10px 10px;
+            width: 100%;
+            height: 100%;
+            border-radius: 6px;
+            cursor: pointer;
+            opacity: 1;
+            -webkit-transition: transform 0.6s ease-in-out, opacity 0s 0s, box-shadow 0.6s ease-in-out;
+            transition: transform 0.6s ease-in-out, opacity 0s 0s, box-shadow 0.6s ease-in-out;
+            -webkit-transform-origin: 0;
+            -ms-transform-origin: 0;
+            transform-origin: left center;
+            -webkit-box-shadow: inset 4px 0 10px rgba(0,0,0,0.1), 1px 1px 12px #000;
+            box-shadow: inset 4px 0 10px rgba(0,0,0,0.1), 1px 1px 12px #000;
+            display: -webkit-box;
+            display: -ms-flexbox;
+            display: flex;
+            flex-direction: column;
+            -webkit-box-align: center;
+            -ms-flex-align: center;
+            align-items: center;
+            -webkit-box-pack: center;
+            -ms-flex-pack: center;
+            justify-content: center;
+            border: 4px solid #1a1a1a;
+            z-index: 5;
+        }
+
+        .book:hover .cover,
+        .book.open .cover {
+            -webkit-transform: rotatey(-180deg) translateZ(1px);
+            -ms-transform: rotatey(-180deg) translateZ(1px);
+            transform: rotatey(-180deg) translateZ(1px);
+            box-shadow: inset -4px 0 10px rgba(0,0,0,0.1), 5px 5px 15px rgba(0,0,0,0.4);
+            z-index: 1;
+        }
+
+        .book.open .cover {
+            opacity: 0;
+            -webkit-transition: transform 0.6s ease-in-out, opacity 0s 0.6s, box-shadow 0.6s ease-in-out;
+            transition: transform 0.6s ease-in-out, opacity 0s 0.6s, box-shadow 0.6s ease-in-out;
+        }
+
+        .cover h1 {
+            font-size: 38px;
+            font-weight: 900;
+            text-transform: uppercase;
+            text-align: center;
+            text-shadow: 4px 4px 0 #fff, 6px 6px 0 #1a1a1a;
+            letter-spacing: 2px;
+            margin: 0;
+            font-family: 'Arial Black', Impact, sans-serif;
+            padding: 0 20px;
+            color: #ef4444;
+        }
+
+        .cover .subtitle {
+            font-size: 18px;
+            font-weight: bold;
+            background: #fff;
+            padding: 8px 16px;
+            border: 3px solid #1a1a1a;
+            transform: rotate(-5deg);
+            margin-top: 30px;
+            box-shadow: 4px 4px 0 #1a1a1a;
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+            color: #1a1a1a;
+        }
+
+        /* 3D Page Turn Animations */
+        .real-page-turn {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            transform-style: preserve-3d;
+            transform-origin: left center;
+            z-index: 4;
+            pointer-events: none;
+        }
+
+        .page-turn-face {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            background-color: #fff;
+            border-radius: 6px;
+            padding: 20px;
+            box-sizing: border-box;
+            overflow: hidden;
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+            line-height: 1.6;
+            color: #000;
+        }
+
+        .page-turn-face img {
+            max-width: 100%;
+            border: 3px solid #1a1a1a;
+            border-radius: 5px;
+            box-shadow: 4px 4px 0 #1a1a1a;
+            margin: 10px 0;
+            display: block;
+        }
+
+        .page-turn-front {
+            /* Front face */
+            transform: rotateY(0deg);
+        }
+
+        .page-turn-back {
+            /* Back face */
+            transform: rotateY(180deg);
+            background-color: #fdfdfd;
+            background-image: linear-gradient(to right, rgba(0,0,0,0.05) 0%, transparent 20%);
+        }
+
+        .animating-next {
+            animation: flipRealNext 0.7s cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
+        }
+
+        .animating-prev {
+            animation: flipRealPrev 0.7s cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
+        }
+
+        @keyframes flipRealNext {
+            0% { transform: rotateY(0deg); }
+            100% { transform: rotateY(-180deg); }
+        }
+
+        @keyframes flipRealPrev {
+            0% { transform: rotateY(-180deg); }
+            100% { transform: rotateY(0deg); }
+        }
+
+        /* Page Turn Corners */
+        .page-corner {
+            position: absolute;
+            bottom: 0;
+            width: 60px;
+            height: 60px;
+            cursor: pointer;
+            z-index: 20;
+            transition: all 0.3s ease;
+        }
+
+        .page-corner-right {
+            right: 0;
+            background: linear-gradient(135deg, transparent 50%, rgba(0,0,0,0.1) 50%);
+        }
+        .page-corner-right:hover {
+            background: linear-gradient(135deg, transparent 40%, rgba(0,0,0,0.3) 50%);
+        }
+
+        .page-corner-left {
+            left: 0;
+            background: linear-gradient(-135deg, transparent 50%, rgba(0,0,0,0.1) 50%);
+        }
+        .page-corner-left:hover {
+            background: linear-gradient(-135deg, transparent 40%, rgba(0,0,0,0.3) 50%);
+        }
+        
+    </style>
+</head>
+<body>
+    <div class="workspace">
+        <!-- Left Sidebar: Notion-style Navigation -->
+        <aside class="sidebar-notion">
+            <!-- Header -->
+            <div class="sidebar-header">
+                <h1 class="sidebar-title">Fantasy Engine</h1>
+            </div>
+
+            <!-- Main Navigation -->
+            <nav class="sidebar-nav">
+                <button class="nav-item active" data-view="home" onclick="setMode('story'); switchView('home')">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                    </svg>
+                    <span>Home</span>
+                </button>
+                <button class="nav-item" id="comicModeBtn" data-view="comic" onclick="setMode('comic'); switchView('comic')">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                    </svg>
+                    <span>Comic Mode</span>
+                </button>
+                <button class="nav-item" data-view="projects" onclick="setMode('story'); switchView('projects')">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                    </svg>
+                    <span>Projects</span>
+                </button>
+                <button class="nav-item" data-view="library" onclick="setMode('story'); switchView('library')">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                    </svg>
+                    <span>Library</span>
+                </button>
+                <button class="nav-item" data-view="gallery" onclick="switchView('gallery')">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                        <polyline points="21 15 16 10 5 21"></polyline>
+                    </svg>
+                    <span>Gallery</span>
+                </button>
+                <button class="nav-item" data-view="settings" onclick="setMode('story'); switchView('settings')">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M12 1v6m0 6v6M4.22 4.22l4.24 4.24m5.08 5.08l4.24 4.24M1 12h6m6 0h6M4.22 19.78l4.24-4.24m5.08-5.08l4.24-4.24"></path>
+                    </svg>
+                    <span>Settings</span>
+                </button>
+                <button class="nav-item" data-view="notes" onclick="switchView('notes')">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
+                    </svg>
+                    <span>Notes</span>
+                </button>
+            </nav>
+
+            <!-- Pages List / Recent Chats -->
+            <div class="pages-section">
+                <div class="pages-title">Recent Chats</div>
+                <div id="pagesList" class="pages-list">
+                    <!-- Pages will be added here dynamically -->
+                </div>
+            </div>
+        </aside>
+
+        <!-- Comic Book View Modal -->
+        <div id="comicBookModal" class="comic-book-modal" onclick="closeBookView(event)">
+            <!-- Left Navigation -->
+            <button id="bookPrevBtn" onclick="prevBookPage(event)" style="position: absolute; left: 5%; background: white; border: 3px solid #1a1a1a; padding: 15px 25px; border-radius: 8px; cursor: pointer; font-size: 24px; font-weight: bold; box-shadow: 4px 4px 0 #1a1a1a; display: none; z-index: 10;">&lt; Prev</button>
+            
+            <div class="book" id="comicBookContainer" onclick="event.stopPropagation()">
+                <!-- Left static page showing the previous page's content -->
+                <div class="book-inside book-left-page" id="bookLeftPage" onclick="handleBookClick(event)" style="transform: translateX(-100%) translateZ(5px); position: absolute; left: 0; top: 0; box-shadow: inset -4px 0 10px rgba(0,0,0,0.1); background-image: linear-gradient(to right, rgba(0,0,0,0.05) 0%, transparent 20%); z-index: 3;">
+                    <!-- Back Content Injected Here -->
+                    <div class="page-corner page-corner-left" onclick="prevBookPage(event)"></div>
+                </div>
+                <!-- Right static page showing current page -->
+                <div class="book-inside" id="bookInsideContent" onclick="handleBookClick(event)" style="z-index: 2; transform: translateZ(2px);">
+                    <!-- Book Content Injected Here -->
+                    <div class="page-corner page-corner-right" onclick="nextBookPage(event)"></div>
+                </div>
+                <div class="cover" id="comicBookCover" onclick="document.getElementById('comicBookContainer').classList.toggle('open'); setTimeout(updateBookNavVisibility, 300)">
+                    <h1>Comic<br>Story</h1>
+                    <div class="subtitle">Issue #1</div>
+                    <div class="page-corner page-corner-right" onclick="event.stopPropagation(); document.getElementById('comicBookContainer').classList.toggle('open'); setTimeout(updateBookNavVisibility, 300)"></div>
+                </div>
+            </div>
+
+            <!-- Right Navigation -->
+            <button id="bookNextBtn" onclick="nextBookPage(event)" style="position: absolute; right: 5%; background: white; border: 3px solid #1a1a1a; padding: 15px 25px; border-radius: 8px; cursor: pointer; font-size: 24px; font-weight: bold; box-shadow: 4px 4px 0 #1a1a1a; display: none; z-index: 10;">Next &gt;</button>
+            
+            <!-- Close Button for Modal -->
+            <button onclick="closeBookView(event)" style="position: absolute; top: 20px; right: 20px; background: white; border: 2px solid #1a1a1a; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 16px; box-shadow: 2px 2px 0 #1a1a1a; z-index: 1001;">Close (X)</button>
+        </div>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Home View: Centered AI Search -->
+            <div id="homeView" class="view-container active">
+                <div id="homeInitial" class="home-center">
+                    <svg class="home-logo" id="homeLogoSvg" width="80" height="80" viewBox="0 0 240 240">
+                        <circle class="pl__ring pl__ring--a" cx="120" cy="120" r="105" fill="none" stroke="#1A1A1A" stroke-width="20" stroke-dasharray="0 660" stroke-dashoffset="-330" stroke-linecap="round"></circle>
+                        <circle class="pl__ring pl__ring--b" cx="120" cy="120" r="35" fill="none" stroke="#1A1A1A" stroke-width="20" stroke-dasharray="0 220" stroke-dashoffset="-110" stroke-linecap="round"></circle>
+                        <circle class="pl__ring pl__ring--c" cx="85" cy="120" r="70" fill="none" stroke="#1A1A1A" stroke-width="20" stroke-dasharray="0 440" stroke-linecap="round"></circle>
+                        <circle class="pl__ring pl__ring--d" cx="155" cy="120" r="70" fill="none" stroke="#1A1A1A" stroke-width="20" stroke-dasharray="0 440" stroke-linecap="round"></circle>
+                    </svg>
+                    <div class="lego-tortoise" id="comicGhostSvg" style="display: none;"></div>
+                    <h2 class="home-greeting" id="homeGreetingText">How can I help you today?</h2>
+                    
+                    <div class="unified-search-box">
+                        <form id="homeAIForm" onsubmit="submitUnifiedPrompt(event, 'home')">
+                            <textarea 
+                                id="homeAIInput" 
+                                class="unified-search-input" 
+                                placeholder="Do anything with AI..."
+                                autocomplete="off"
+                                rows="1"
+                            ></textarea>
+                            <input type="file" id="homeImageUpload" accept="image/*" style="display: none;" onchange="handleImageSelect('home')">
+                            <div id="homeImagePreview" style="display:none; padding: 4px 12px;"></div>
+                            <div class="unified-search-footer">
+                                <div class="unified-search-left">
+                                    <button type="button" class="unified-icon-btn" title="Add Image" onclick="document.getElementById('homeImageUpload').click()">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+                                    </button>
+                                    <button type="button" class="unified-icon-btn" title="Generate Image" onclick="triggerImageGeneration('home')">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                    </button>
+                                    <button type="button" class="unified-icon-btn" title="Generate Image" onclick="triggerImageGeneration('home')">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                                    </button>
+                                    <button type="button" class="unified-icon-btn" title="Filter">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>
+                                    </button>
+                                </div>
+                                <div class="unified-search-right">
+                                    <span class="unified-search-label">Auto</span>
+                                    <button type="button" class="unified-icon-btn voice-btn" title="Voice input" onclick="toggleVoiceInput(this)">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v12a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                                    </button>
+                                    <button type="submit" class="unified-icon-btn submit-btn" title="Send">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="home-suggestions-container">
+                        <p class="home-suggestions-title">Get started</p>
+                        <div class="home-suggestions-grid">
+                            <div class="home-card" onclick="setHomePrompt('Create a detailed fantasy character profile')">
+                                <span class="home-card-icon">🧙</span>
+                                <span>Create a fantasy character</span>
+                            </div>
+                            <div class="home-card" onclick="setHomePrompt('Generate lore for a new magical world')">
+                                <span class="home-card-icon">🌍</span>
+                                <span>Generate magical world lore</span>
+                            </div>
+                            <div class="home-card" onclick="setHomePrompt('Design an epic quest storyline')">
+                                <span class="home-card-icon">⚔️</span>
+                                <span>Design an epic quest</span>
+                            </div>
+                            <div class="home-card" onclick="setHomePrompt('Describe a mythical creature with unique abilities')">
+                                <span class="home-card-icon">🐉</span>
+                                <span>Describe a mythical creature</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Projects View -->
+            <div id="projectsView" class="view-container">
+                <div class="view-header" style="display: flex; justify-content: space-between; align-items: center; padding: 20px;">
+                    <h1>My Projects</h1>
+                    <button class="new-page-btn" onclick="addNewPage()">+ New Project</button>
+                </div>
+                <div class="view-content" style="padding: 20px;">
+                    <div id="projectsGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px;">
+                        <!-- Projects dynamically inserted here via JS -->
+                        <p class="empty-message" id="projectsEmptyMsg" style="display: none;">No projects yet. Click the + button to create one.</p>
+                    </div>
+                </div>
+            </div>
+
+                        <!-- Notes View -->
+            <div id="notesView" class="view-container">
+                <div class="view-header" style="display: flex; justify-content: space-between; align-items: center; padding: 20px;">
+                    <h1>My Sticky Notes</h1>
+                    <button class="new-page-btn" onclick="createNewNote()">+ Add Note</button>
+                </div>
+                <div class="view-content" style="padding: 20px;">
+                    <div id="stickyNotesContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; align-items: flex-start;">
+                        <!-- Sticky notes inserted here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Library View -->
+            <div id="libraryView" class="view-container">
+                <div class="view-header">
+                    <h1>Library</h1>
+                </div>
+                <div class="view-content">
+                    <p class="empty-message">Your story library will appear here.</p>
+                </div>
+            </div>
+
+            <!-- Gallery View -->
+            <div id="galleryView" class="view-container">
+                <div class="view-header">
+                    <h2>Image Gallery</h2>
+                    <p class="view-subtitle">All images generated in this session</p>
+                </div>
+                <div id="generatedImagesGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; padding: 20px 0;">
+                    <!-- Images will be appended here -->
+                </div>
+            </div>
+
+            <!-- Settings View -->
+            <div id="settingsView" class="view-container">
+                <div class="view-header">
+                    <h1>Settings</h1>
+                </div>
+                <div class="view-content settings-content">
+                    <div class="settings-card">
+                        <h3>API Configuration</h3>
+                        <p class="settings-desc">Update your Groq API key to lift rate limits during grading.</p>
+                        <input type="password" id="userApiKey" class="settings-input" placeholder="Enter your groq API key (optional)">
+                        
+                        <h3 class="mt-4">AI Model</h3>
+                        <p class="settings-desc">Choose the AI model for generation.</p>
+                        <select id="aiModelSelect" class="settings-input">
+                            <option value="llama-3.3-70b-versatile">Llama 3.3 70B (High Quality, Strict Limits)</option>
+                            <option value="llama-3.1-8b-instant">Llama 3.1 8B (Fast, High Limits)</option>
+                            <option value="mixtral-8x7b-32768">Mixtral 8x7B (Balanced)</option>
+                        </select>
+
+                        <h3 class="mt-4">Image Generation</h3>
+                        <p class="settings-desc">Get a free image token from <a href="https://huggingface.co/settings/tokens" target="_blank" style="color: #10a37f;">HuggingFace.co</a> (Use Stable Diffusion XL).</p>
+                        <input type="password" id="hfApiKey" class="settings-input" placeholder="Enter Hugging Face Read Token (hf_...)">
+
+                        <h3 class="mt-4">ElevenLabs Audio (Optional)</h3>
+                        <p class="settings-desc">Provide an ElevenLabs API key for advanced AI Voice Narration.</p>
+                        <input type="password" id="elevenLabsKey" class="settings-input" placeholder="Enter ElevenLabs API key...">
+                        
+                        <button class="settings-btn mt-4" onclick="saveSettings()">Save Settings</button>
+                        <span id="settingsStatus" class="settings-status"></span>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- Story Editor View -->
+            <div id="editorView" class="view-container">
+                <button id="zenModeToggle" onclick="toggleZenMode()" title="Zen Mode (Presentation)" style="position: fixed; top: 15px; right: 25px; border: 1px solid var(--border-color); background: var(--bg-page); border-radius: 6px; padding: 6px 12px; cursor: pointer; color: var(--text-secondary); z-index: 100; display: flex; align-items: center; gap: 8px; box-shadow: var(--shadow-sm); font-size: 13px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+                    <span>Zen Mode</span>
+                </button>
+                <button id="exportMdToggle" onclick="exportChatMarkDown()" title="Export to Markdown" style="position: fixed; top: 15px; right: 145px; border: 1px solid var(--border-color); background: var(--bg-page); border-radius: 6px; padding: 6px 12px; cursor: pointer; color: var(--text-secondary); z-index: 100; display: flex; align-items: center; gap: 8px; box-shadow: var(--shadow-sm); font-size: 13px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"></path></svg>
+                    <span>Export MD</span>
+                </button>
+                <button id="exportPdfToggle" onclick="exportToPDF()" title="Export to PDF" style="position: fixed; top: 15px; right: 265px; border: 1px solid var(--border-color); background: var(--bg-page); border-radius: 6px; padding: 6px 12px; cursor: pointer; color: var(--text-secondary); z-index: 100; display: flex; align-items: center; gap: 8px; box-shadow: var(--shadow-sm); font-size: 13px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                    <span>Export PDF</span>
+                </button>
+                <button id="bookViewToggle" onclick="toggleBookView()" title="Book View" style="position: fixed; top: 15px; right: 385px; border: 1px solid var(--border-color); background: var(--bg-page); border-radius: 6px; padding: 6px 12px; cursor: pointer; color: var(--text-secondary); z-index: 100; display: none; align-items: center; gap: 8px; box-shadow: var(--shadow-sm); font-size: 13px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+                    <span>Book View</span>
+                </button>
+                <div class="editor-main">
+                    <div id="editor-content" class="editor-content" contenteditable="true">
+                        <!-- Story content will be rendered here -->
+                    </div>
+                    <!-- Loading Indicator (Hidden by default) -->
+                    <div id="loading-container" class="loading-container" style="display: none;">
+                        <svg class="pl" width="240" height="240" viewBox="0 0 240 240">
+                            <circle class="pl__ring pl__ring--a" cx="120" cy="120" r="105" fill="none" stroke="#1A1A1A" stroke-width="20" stroke-dasharray="0 660" stroke-dashoffset="-330" stroke-linecap="round"></circle>
+                            <circle class="pl__ring pl__ring--b" cx="120" cy="120" r="35" fill="none" stroke="#1A1A1A" stroke-width="20" stroke-dasharray="0 220" stroke-dashoffset="-110" stroke-linecap="round"></circle>
+                            <circle class="pl__ring pl__ring--c" cx="85" cy="120" r="70" fill="none" stroke="#1A1A1A" stroke-width="20" stroke-dasharray="0 440" stroke-linecap="round"></circle>
+                            <circle class="pl__ring pl__ring--d" cx="155" cy="120" r="70" fill="none" stroke="#1A1A1A" stroke-width="20" stroke-dasharray="0 440" stroke-linecap="round"></circle>
+                        </svg>
+                    </div>
+                </div>
+
+                <!-- Fixed Bottom AI Input Box -->
+                <div class="bottom-unified-box">
+                    <div class="quick-actions-container">
+                        <button type="button" class="quick-action-chip" onclick="executeQuickAction('✨ Flesh out this NPC')">✨ Flesh out this NPC</button>
+                        <button type="button" class="quick-action-chip" onclick="executeQuickAction('⚔️ Describe a battle scene')">⚔️ Describe a battle scene</button>
+                        <button type="button" class="quick-action-chip" onclick="executeQuickAction('📜 Generate ancient prophecy')">📜 Generate ancient prophecy</button>
+                    </div>
+                    <div class="unified-search-box" style="position: relative;">
+                        <!-- Slash Command Menu -->
+                        <div id="slashCommandMenu" class="slash-menu hidden">
+                            <div class="slash-menu-item" data-cmd="/character" onclick="insertSlashCommand(this)">
+                                <strong>/character</strong>
+                                <span>Generate a detailed character profile</span>
+                            </div>
+                            <div class="slash-menu-item" data-cmd="/location" onclick="insertSlashCommand(this)">
+                                <strong>/location</strong>
+                                <span>Create a unique setting with sensory details</span>
+                            </div>
+                            <div class="slash-menu-item" data-cmd="/lore" onclick="insertSlashCommand(this)">
+                                <strong>/lore</strong>
+                                <span>Provide a historical or magical world fact</span>
+                            </div>
+                            <div class="slash-menu-item" data-cmd="/magic-system" onclick="insertSlashCommand(this)">
+                                <strong>/magic-system</strong>
+                                <span>Define rules and costs for magical abilities</span>
+                            </div>
+                        </div>
+
+                        <form id="editorAIForm" onsubmit="submitUnifiedPrompt(event, 'editor')">
+                            <textarea
+                                id="editorAIInput"
+                                class="unified-search-input" 
+                                placeholder="Do anything with AI..."
+                                autocomplete="off"
+                                rows="1"
+                            ></textarea>
+                            <input type="file" id="editorImageUpload" accept="image/*" style="display: none;" onchange="handleImageSelect('editor')">
+                            <div id="editorImagePreview" style="display:none; padding: 4px 12px;"></div>
+                            <div class="unified-search-footer">
+                                <div class="unified-search-left">
+                                    <button type="button" class="unified-icon-btn" title="Add Image" onclick="document.getElementById('editorImageUpload').click()">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+                                    </button>
+                                    <button type="button" class="unified-icon-btn" title="Generate Image" onclick="triggerImageGeneration('editor')">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                    </button>
+                                    <button type="button" class="unified-icon-btn" title="Generate Image" onclick="triggerImageGeneration('editor')">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                                    </button>
+                                    <button type="button" class="unified-icon-btn" title="More options">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
+                                    </button>
+                                </div>
+                                <div class="unified-search-right">
+                                    <span class="unified-search-label">Auto</span>
+                                    <button type="button" class="unified-icon-btn voice-btn" title="Voice input" onclick="toggleVoiceInput(this)">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v12a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                                    </button>
+                                    <button type="submit" class="unified-icon-btn submit-btn" title="Send">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='script_editor.js') }}"></script>
+</body>
+</html>
+
+
+
