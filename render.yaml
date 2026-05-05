@@ -2,7 +2,6 @@ services:
   - type: web
     name: creative-story-bot
     runtime: python
-    runtimeVersion: 3.11
     buildCommand: pip install -r requirements.txt
     startCommand: python app_web.py
     envVars:
